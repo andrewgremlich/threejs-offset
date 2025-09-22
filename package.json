@@ -16,7 +16,7 @@
     }
   },
   "scripts": {
-    "check": "biome check --write ./src/**/*.ts",
+    "check": "biome check --write ./src/**/*.ts ./demo/**",
     "dev": "vite",
     "build:demo": "vite build --mode demo",
     "build:lib": "vite build",
