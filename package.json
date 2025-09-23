@@ -16,6 +16,8 @@
     }
   },
   "scripts": {
+    "check": "biome check --write ./src/**/*.ts ./demo/**",
+    "check:ci": "biome check ./src/**/*.ts ./demo/**",
     "dev": "vite",
     "build:demo": "vite build --mode demo",
     "build:lib": "vite build",
@@ -43,6 +45,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.2.4",
     "@types/three": "^0.180.0",
     "three": "^0.180.0",
     "typescript": "^5.9.2",

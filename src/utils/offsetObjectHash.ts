@@ -1,5 +1,5 @@
-import { InitialObject } from "@/types"
-import { HashTable } from "./hashTable"
+import type { InitialObject, VertexUsageInfo } from "@/types";
+import { HashTable } from "./hashTable";
 
 /**
  * Creates the mesh with offset
@@ -8,22 +8,22 @@ import { HashTable } from "./hashTable"
  * @returns The new object with the offset
  */
 export const createOffsetMesh = (data: string, offset: number): InitialObject[] => {
-  const initialObjects = parseASCII(data)
+  const initialObjects = parseASCII(data);
 
-  const hashTable = createHashTableWithObject(initialObjects)
+  const hashTable = createHashTableWithObject(initialObjects);
 
   const newObjects = initialObjects.map((item) => {
     return {
       ...item,
       normal: [],
       vertices: [],
-    }
-  })
+    };
+  });
 
-  const finalObjects = calcOffset(hashTable, newObjects, offset)
+  const finalObjects = calcOffset(hashTable, newObjects, offset);
 
-  return finalObjects
-}
+  return finalObjects;
+};
 
 /**
  * Reads the file and creates an object
@@ -31,48 +31,60 @@ export const createOffsetMesh = (data: string, offset: number): InitialObject[] 
  * @returns The content of the file in an array of objects
  */
 const parseASCII = (data: string): InitialObject[] => {
-  const patternSolid = /solid([\s\S]*?)endsolid/g
-  const patternFace = /facet([\s\S]*?)endfacet/g
+  const patternSolid = /solid([\s\S]*?)endsolid/g;
+  const patternFace = /facet([\s\S]*?)endfacet/g;
 
-  const patternFloat = /[\s]+([+-]?(?:\d*)(?:\.\d*)?(?:[eE][+-]?\d+)?)/.source
-  const patternVertex = new RegExp("vertex" + patternFloat + patternFloat + patternFloat, "g")
-  const patternNormal = new RegExp("normal" + patternFloat + patternFloat + patternFloat, "g")
+  const patternFloat = /[\s]+([+-]?(?:\d*)(?:\.\d*)?(?:[eE][+-]?\d+)?)/.source;
+  const patternVertex = new RegExp(`vertex${patternFloat}${patternFloat}${patternFloat}`, "g");
+  const patternNormal = new RegExp(`normal${patternFloat}${patternFloat}${patternFloat}`, "g");
 
-  let result
-  let initialObjects = []
+  let result: RegExpExecArray | null;
+  const initialObjects = [];
 
-  while ((result = patternSolid.exec(data)) !== null) {
-    const solid = result[0]
-    let faceNumber = 0
+  result = patternSolid.exec(data);
+  while (result !== null) {
+    const solid = result[0];
+    let faceNumber = 0;
 
-    while ((result = patternFace.exec(solid)) !== null) {
-      const text = result[0]
+    let faceResult = patternFace.exec(solid);
+    while (faceResult !== null) {
+      const text = faceResult[0];
 
-      faceNumber++
-      const normalV = []
-      const verticesV = []
+      faceNumber++;
+      const normalV: number[] = [];
+      const verticesV: number[][] = [];
 
-      while ((result = patternNormal.exec(text)) !== null) {
-        normalV.push(parseFloat(result[1]), parseFloat(result[2]), parseFloat(result[3]))
+      let normalResult = patternNormal.exec(text);
+      while (normalResult !== null) {
+        normalV.push(parseFloat(normalResult[1]), parseFloat(normalResult[2]), parseFloat(normalResult[3]));
+        normalResult = patternNormal.exec(text);
       }
 
-      while ((result = patternVertex.exec(text)) !== null) {
-        const verticesXYZ = []
-        verticesXYZ.push(parseFloat(result[1]), parseFloat(result[2]), parseFloat(result[3]))
-        verticesV.push(verticesXYZ)
+      let vertexResult = patternVertex.exec(text);
+      while (vertexResult !== null) {
+        const verticesXYZ: number[] = [
+          parseFloat(vertexResult[1]),
+          parseFloat(vertexResult[2]),
+          parseFloat(vertexResult[3]),
+        ];
+        verticesV.push(verticesXYZ);
+        vertexResult = patternVertex.exec(text);
       }
 
-      let initialObject = {
+      const initialObject = {
         face: faceNumber,
         normal: normalV,
         vertices: verticesV,
-      }
+      };
 
-      initialObjects.push(initialObject)
+      initialObjects.push(initialObject);
+      faceResult = patternFace.exec(solid);
     }
+
+    result = patternSolid.exec(data);
   }
-  return initialObjects
-}
+  return initialObjects;
+};
 
 /**
  * Create an hashTable with the initial objects - reduce the complexity of the algorithm
@@ -80,22 +92,22 @@ const parseASCII = (data: string): InitialObject[] => {
  * @returns HashTable of objects with the same vertex
  */
 const createHashTableWithObject = (initialObjects: InitialObject[]): HashTable<any, any> => {
-  const hashTable = new HashTable(initialObjects.length)
+  const hashTable = new HashTable(initialObjects.length);
 
-  for (var i = 0; i < initialObjects.length; i++) {
-    for (var j = 0; j < initialObjects[i].vertices.length; j++) {
+  for (let i = 0; i < initialObjects.length; i++) {
+    for (let j = 0; j < initialObjects[i].vertices.length; j++) {
       // key: the current vertex initialObjects[i].vertices[j]
       // value: the face initialObjects[i].face, the normal initialObjects[i].normal and the position j
       hashTable.set(initialObjects[i].vertices[j], {
         face: initialObjects[i].face,
         normal: initialObjects[i].normal,
         vertexPositionInTheObject: j,
-      })
+      });
     }
   }
 
-  return hashTable
-}
+  return hashTable;
+};
 
 /**
  * Calculates the offset of the object
@@ -105,59 +117,59 @@ const createHashTableWithObject = (initialObjects: InitialObject[]): HashTable<a
  * @returns The new objects with the offset
  */
 const calcOffset = (hashTable: HashTable<any, any>, newObjects: InitialObject[], offset: number): InitialObject[] => {
-  for (var i = 0; i < hashTable.data.length; i++) {
+  for (let i = 0; i < hashTable.data.length; i++) {
     if (hashTable.data[i]) {
-      for (var j = 0; j < hashTable.data[i].length; j++) {
+      for (let j = 0; j < hashTable.data[i].length; j++) {
         // vector hashTable.data[i][j][0];
         // object hashTable.data[i][j][1];
 
-        const normalsSum = calcNormalsSum(hashTable.data[i][j][1])
+        const normalsSum = calcNormalsSum(hashTable.data[i][j][1]);
 
-        const normalizedNormal = normalizeNormal(normalsSum)
+        const normalizedNormal = normalizeNormal(normalsSum);
 
-        const newPosition = calcNewPosition(offset, normalizedNormal, hashTable.data[i][j][0])
+        const newPosition = calcNewPosition(offset, normalizedNormal, hashTable.data[i][j][0]);
 
-        hashTable.data[i][j][1].map((list) => {
-          newObjects.find((newObject) => {
+        hashTable.data[i][j][1].forEach((list) => {
+          newObjects.forEach((newObject) => {
             if (newObject.face === list.face) {
-              newObject.vertices[list.vertexPositionInTheObject] = newPosition
+              newObject.vertices[list.vertexPositionInTheObject] = newPosition;
             }
-          })
-        })
+          });
+        });
       }
     }
   }
 
   newObjects.map((item) => {
-    const newNormal = calculateNewNormal(item.vertices[0], item.vertices[1], item.vertices[2])
+    const newNormal = calculateNewNormal(item.vertices[0], item.vertices[1], item.vertices[2]);
     return {
       ...item,
       normal: item.normal.push(newNormal[0], newNormal[1], newNormal[2]),
-    }
-  })
+    };
+  });
 
-  return newObjects
-}
+  return newObjects;
+};
 
 /**
  * Calculates the sum of the normals of the faces
  * @param {Array} tempList Array of objects with the same vertex
  * @returns The sum of all the normals
  */
-const calcNormalsSum = (tempList: any[]): number[] => {
+const calcNormalsSum = (tempList: VertexUsageInfo[]): number[] => {
   // const result = tempList.reduce((prev, curr) => prev + curr.normal, 0);
-  let sumX = 0
-  let sumY = 0
-  let sumZ = 0
+  let sumX = 0;
+  let sumY = 0;
+  let sumZ = 0;
 
-  tempList.map((item) => {
-    sumX += item.normal[0]
-    sumY += item.normal[1]
-    sumZ += item.normal[2]
-  })
+  tempList.forEach((item) => {
+    sumX += item.normal[0];
+    sumY += item.normal[1];
+    sumZ += item.normal[2];
+  });
 
-  return [sumX, sumY, sumZ]
-}
+  return [sumX, sumY, sumZ];
+};
 
 /**
  * Normalizes the normal vector
@@ -165,12 +177,12 @@ const calcNormalsSum = (tempList: any[]): number[] => {
  * @returns The normalized normal
  */
 const normalizeNormal = (normal: number[]): number[] => {
-  const modul = Math.sqrt(Math.pow(normal[0], 2) + Math.pow(normal[1], 2) + Math.pow(normal[2], 2))
+  const modul = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
 
-  const normalizedNormal = [normal[0] / modul, normal[1] / modul, normal[2] / modul]
+  const normalizedNormal = [normal[0] / modul, normal[1] / modul, normal[2] / modul];
 
-  return normalizedNormal
-}
+  return normalizedNormal;
+};
 
 /**
  * Calculates the new position of the vertex
@@ -180,8 +192,8 @@ const normalizeNormal = (normal: number[]): number[] => {
  * @returns The new position of the vertex
  */
 const calcNewPosition = (offset: number, normal: number[], vertex: number[]): number[] => {
-  return [offset * normal[0] + vertex[0], offset * normal[1] + vertex[1], offset * normal[2] + vertex[2]]
-}
+  return [offset * normal[0] + vertex[0], offset * normal[1] + vertex[1], offset * normal[2] + vertex[2]];
+};
 
 /**
  * Calculates the new normal of the face
@@ -191,12 +203,12 @@ const calcNewPosition = (offset: number, normal: number[], vertex: number[]): nu
  * @returns The new normal
  */
 const calculateNewNormal = (v1: number[], v2: number[], v3: number[]): number[] => {
-  const nx = (v2[1] - v1[1]) * (v3[2] - v1[2]) - (v2[2] - v1[2]) * (v3[1] - v1[1])
-  const ny = -((v2[0] - v1[0]) * (v3[2] - v1[2]) - (v2[2] - v1[2]) * (v3[0] - v1[0]))
-  const nz = (v2[0] - v1[0]) * (v3[1] - v1[1]) - (v2[1] - v1[1]) * (v3[0] - v1[0])
+  const nx = (v2[1] - v1[1]) * (v3[2] - v1[2]) - (v2[2] - v1[2]) * (v3[1] - v1[1]);
+  const ny = -((v2[0] - v1[0]) * (v3[2] - v1[2]) - (v2[2] - v1[2]) * (v3[0] - v1[0]));
+  const nz = (v2[0] - v1[0]) * (v3[1] - v1[1]) - (v2[1] - v1[1]) * (v3[0] - v1[0]);
 
-  const normal = [nx, ny, nz]
-  const normalizedNormal = normalizeNormal(normal)
+  const normal = [nx, ny, nz];
+  const normalizedNormal = normalizeNormal(normal);
 
-  return normalizedNormal
-}
+  return normalizedNormal;
+};
