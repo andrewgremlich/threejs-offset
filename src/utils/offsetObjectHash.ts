@@ -7,10 +7,7 @@ import { HashTable } from "./hashTable";
  * @param {Number} offset The offset number to offset the mesh
  * @returns The new object with the offset
  */
-export const createOffsetMesh = (
-  data: string,
-  offset: number,
-): InitialObject[] => {
+export const createOffsetMesh = (data: string, offset: number): InitialObject[] => {
   const initialObjects = parseASCII(data);
 
   const hashTable = createHashTableWithObject(initialObjects);
@@ -38,14 +35,8 @@ const parseASCII = (data: string): InitialObject[] => {
   const patternFace = /facet([\s\S]*?)endfacet/g;
 
   const patternFloat = /[\s]+([+-]?(?:\d*)(?:\.\d*)?(?:[eE][+-]?\d+)?)/.source;
-  const patternVertex = new RegExp(
-    `vertex${patternFloat}${patternFloat}${patternFloat}`,
-    "g",
-  );
-  const patternNormal = new RegExp(
-    `normal${patternFloat}${patternFloat}${patternFloat}`,
-    "g",
-  );
+  const patternVertex = new RegExp(`vertex${patternFloat}${patternFloat}${patternFloat}`, "g");
+  const patternNormal = new RegExp(`normal${patternFloat}${patternFloat}${patternFloat}`, "g");
 
   let result: RegExpExecArray | null;
   const initialObjects = [];
@@ -65,11 +56,7 @@ const parseASCII = (data: string): InitialObject[] => {
 
       let normalResult = patternNormal.exec(text);
       while (normalResult !== null) {
-        normalV.push(
-          parseFloat(normalResult[1]),
-          parseFloat(normalResult[2]),
-          parseFloat(normalResult[3]),
-        );
+        normalV.push(parseFloat(normalResult[1]), parseFloat(normalResult[2]), parseFloat(normalResult[3]));
         normalResult = patternNormal.exec(text);
       }
 
@@ -104,9 +91,7 @@ const parseASCII = (data: string): InitialObject[] => {
  * @param {Array} initialObjects The data from the file
  * @returns HashTable of objects with the same vertex
  */
-const createHashTableWithObject = (
-  initialObjects: InitialObject[],
-): HashTable<any, any> => {
+const createHashTableWithObject = (initialObjects: InitialObject[]): HashTable<any, any> => {
   const hashTable = new HashTable(initialObjects.length);
 
   for (let i = 0; i < initialObjects.length; i++) {
@@ -131,11 +116,7 @@ const createHashTableWithObject = (
  * @param {Number} offset The offset to move the mesh
  * @returns The new objects with the offset
  */
-const calcOffset = (
-  hashTable: HashTable<any, any>,
-  newObjects: InitialObject[],
-  offset: number,
-): InitialObject[] => {
+const calcOffset = (hashTable: HashTable<any, any>, newObjects: InitialObject[], offset: number): InitialObject[] => {
   for (let i = 0; i < hashTable.data.length; i++) {
     if (hashTable.data[i]) {
       for (let j = 0; j < hashTable.data[i].length; j++) {
@@ -146,11 +127,7 @@ const calcOffset = (
 
         const normalizedNormal = normalizeNormal(normalsSum);
 
-        const newPosition = calcNewPosition(
-          offset,
-          normalizedNormal,
-          hashTable.data[i][j][0],
-        );
+        const newPosition = calcNewPosition(offset, normalizedNormal, hashTable.data[i][j][0]);
 
         hashTable.data[i][j][1].forEach((list) => {
           newObjects.forEach((newObject) => {
@@ -164,11 +141,7 @@ const calcOffset = (
   }
 
   newObjects.map((item) => {
-    const newNormal = calculateNewNormal(
-      item.vertices[0],
-      item.vertices[1],
-      item.vertices[2],
-    );
+    const newNormal = calculateNewNormal(item.vertices[0], item.vertices[1], item.vertices[2]);
     return {
       ...item,
       normal: item.normal.push(newNormal[0], newNormal[1], newNormal[2]),
@@ -206,11 +179,7 @@ const calcNormalsSum = (tempList: VertexUsageInfo[]): number[] => {
 const normalizeNormal = (normal: number[]): number[] => {
   const modul = Math.sqrt(normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2);
 
-  const normalizedNormal = [
-    normal[0] / modul,
-    normal[1] / modul,
-    normal[2] / modul,
-  ];
+  const normalizedNormal = [normal[0] / modul, normal[1] / modul, normal[2] / modul];
 
   return normalizedNormal;
 };
@@ -222,16 +191,8 @@ const normalizeNormal = (normal: number[]): number[] => {
  * @param {Array} vertex The vertex
  * @returns The new position of the vertex
  */
-const calcNewPosition = (
-  offset: number,
-  normal: number[],
-  vertex: number[],
-): number[] => {
-  return [
-    offset * normal[0] + vertex[0],
-    offset * normal[1] + vertex[1],
-    offset * normal[2] + vertex[2],
-  ];
+const calcNewPosition = (offset: number, normal: number[], vertex: number[]): number[] => {
+  return [offset * normal[0] + vertex[0], offset * normal[1] + vertex[1], offset * normal[2] + vertex[2]];
 };
 
 /**
@@ -241,19 +202,10 @@ const calcNewPosition = (
  * @param {Array} v3 The third vertex
  * @returns The new normal
  */
-const calculateNewNormal = (
-  v1: number[],
-  v2: number[],
-  v3: number[],
-): number[] => {
-  const nx =
-    (v2[1] - v1[1]) * (v3[2] - v1[2]) - (v2[2] - v1[2]) * (v3[1] - v1[1]);
-  const ny = -(
-    (v2[0] - v1[0]) * (v3[2] - v1[2]) -
-    (v2[2] - v1[2]) * (v3[0] - v1[0])
-  );
-  const nz =
-    (v2[0] - v1[0]) * (v3[1] - v1[1]) - (v2[1] - v1[1]) * (v3[0] - v1[0]);
+const calculateNewNormal = (v1: number[], v2: number[], v3: number[]): number[] => {
+  const nx = (v2[1] - v1[1]) * (v3[2] - v1[2]) - (v2[2] - v1[2]) * (v3[1] - v1[1]);
+  const ny = -((v2[0] - v1[0]) * (v3[2] - v1[2]) - (v2[2] - v1[2]) * (v3[0] - v1[0]));
+  const nz = (v2[0] - v1[0]) * (v3[1] - v1[1]) - (v2[1] - v1[1]) * (v3[0] - v1[0]);
 
   const normal = [nx, ny, nz];
   const normalizedNormal = normalizeNormal(normal);

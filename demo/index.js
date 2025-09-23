@@ -24,12 +24,7 @@ function init() {
   container.appendChild(renderer.domElement);
   window.addEventListener("resize", onWindowResize, false);
 
-  const camera = new THREE.PerspectiveCamera(
-    45,
-    sizes.width / sizes.height,
-    1,
-    1000,
-  );
+  const camera = new THREE.PerspectiveCamera(45, sizes.width / sizes.height, 1, 1000);
   camera.position.x = 0;
   camera.position.y = -200;
   camera.position.z = 100;
@@ -159,9 +154,7 @@ btnClearScene.addEventListener("click", () => {
 });
 
 const clearScene = () => {
-  const meshes = scene.children.filter(
-    (item) => item.type === "Mesh" || item.type === "Points",
-  );
+  const meshes = scene.children.filter((item) => item.type === "Mesh" || item.type === "Points");
 
   if (meshes.length > 0) {
     for (const mesh of meshes) {

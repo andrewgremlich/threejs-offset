@@ -7,9 +7,7 @@ import type { InitialObject } from "@/types";
  * @param {Object} object This is an object with normals and vertices
  * @returns THREE.Mesh
  */
-export const createMeshFromObject = (
-  object: InitialObject[],
-): Promise<THREE.Mesh> =>
+export const createMeshFromObject = (object: InitialObject[]): Promise<THREE.Mesh> =>
   new Promise((resolve) => {
     const geometry = new THREE.BufferGeometry();
     const material = new THREE.MeshStandardMaterial({
@@ -44,21 +42,13 @@ export const createMeshFromObject = (
       verticesPosition[i + 2] = vertices[i + 2];
     }
 
-    geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(verticesPosition, 3),
-    );
-    geometry.setAttribute(
-      "normal",
-      new THREE.BufferAttribute(normalsPosition, 3),
-    );
+    geometry.setAttribute("position", new THREE.BufferAttribute(verticesPosition, 3));
+    geometry.setAttribute("normal", new THREE.BufferAttribute(normalsPosition, 3));
 
     const newGeometry = mergeVertices(geometry);
     newGeometry.computeVertexNormals();
 
-    const colorArray = new Uint8Array(
-      newGeometry.attributes.position.count * 3,
-    );
+    const colorArray = new Uint8Array(newGeometry.attributes.position.count * 3);
     colorArray.fill(255);
     const colorAttr = new THREE.BufferAttribute(colorArray, 3, true);
     colorAttr.setUsage(THREE.DynamicDrawUsage);
