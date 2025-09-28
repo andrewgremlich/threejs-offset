@@ -10,37 +10,92 @@ https://threejs-offset.netlify.app/
 - [Offset with three.js](#offset-with-threejs)
     - [Demo](#demo)
   - [Table of Contents](#table-of-contents)
-  - [General info](#general-info)
-  - [Issues](#issues)
-  - [Setup](#setup)
+  - [Installation](#installation)
+  - [Usage](#usage)
+    - [Offset a mesh](#offset-a-mesh)
+    - [Offset geometry points](#offset-geometry-points)
+  - [Notes](#notes)
+  - [How it works](#how-it-works)
+  - [Limitations](#limitations)
+  - [Development](#development)
+  - [Contributing](#contributing)
 
-## General info
+## Installation
 
-This simple application gives you a basic idea of an offset on a mesh. You can try the functionality with different files and different offset values.   
+```
+npm install threejs-offset
+```
+or
+```
+yarn add threejs-offset
+```
 
-With this application is possible to try adding an offset to your mesh and obtain a list of points or a meshed offset. We have two different algorithms, one to manipulate the point offset and another for the meshed offset.
+## Usage
 
-The logic of the first algorithm is based on getting the vertices and the normals of the geometry of the selected mesh and creating an array of new vertices with the given offset and then creating a new 3D object, with points.
+This library provides two algorithms for offsetting STL geometry and one helper to build a mesh:
 
-The logic of the second one is more complicated and the results are not perfect, but it's a starting point. Let's look at the steps to obtain the meshed offset.
+- `processGeometry` → offset points
+- `createOffsetMesh` → offset a full mesh
+- `createMeshFromObject` → convert an offset mesh object into a Three.js Mesh
 
-A mesh has a geometry with a list of vertices and normals. We want to get the faces of the mesh, calculate a new position with the passed offset and the normal of the faces and then reposition the faces in the correct place.
+### Offset a mesh
 
-1. Exports the mesh as a not binary file and creates an object with the number of the face, the normal of this face and the three vertices of the face
-2. Creates a hash table with the vertex in common on more faces as the key and the value is a list of objects with the face, the normal and the position of the vertex in the face.
-3. Calculates the sum of the normals of the faces with the same vertex in common
-4. Normalizes the normal
-5. Calculates the new position with the offset, the normal and the vertex
-6. Adds the new position in the correct position of the new object (this is a clone of the initial object)
-7. At the end calculates the new normals with the new positions and completes the new object
-8. Creates a mesh from the new objects 
+```ts
+import { createOffsetMesh, createMeshFromObject } from "threejs-offset"
 
-## Issues 
-- The process can be slow when trying to load relatively complex models with a lot of faces. If you want, you can move the files `offsetObjectHash` and `hashTable` to a node.js server.
-- The process does not work in some cases, for example, with a sphere. I'm working on it. If you have some ideas on how to improve it, please open an issue, I appreciate that.
+// Example: parse STL data and apply an offset
+const stlData = "... your STL file contents ..."
+const offset = 2.0
 
+// Create an offset mesh object
+const objects = createOffsetMesh(stlData, offset)
 
-## Setup
+// Convert the object into a Three.js Mesh
+const mesh = createMeshFromObject(objects)
+scene.add(mesh)
+```
+
+### Offset geometry points
+
+```javascript
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { processGeometry } from "threejs-offset";
+
+// If you have an STL file (ArrayBuffer):
+const geometry = new STLLoader().parse(arrayBuffer); // THREE.BufferGeometry
+const offset = 2;
+
+// Ensure normals are present (STLLoader usually provides them; otherwise compute)
+if (!geometry.attributes.normal) geometry.computeVertexNormals?.();
+
+const points = processGeometry(geometry, offset); // returns THREE.Points
+scene.add(points);
+```
+
+## Notes
+
+- `processGeometry` returns a `THREE.Points` instance with material `PointsMaterial({ color: 0xff0000, size: 0.7 })` and `name = "offset"`.
+
+- `createOffsetMesh` expects an ASCII STL string (not a `BufferGeometry`). In practice the workflow in the demo is: export a mesh to ASCII (via `STLExporter`), call `createOffsetMesh`, then `await createMeshFromObject(...)`.
+
+- If your geometry lacks normals, call `geometry.computeVertexNormals()` before using `processGeometry`.
+
+## How it works
+
+The library provides two algorithms:
+
+- Point offset – creates a new set of vertices displaced by the given offset.
+- Mesh offset – recalculates faces, normals, and vertices to generate a new offset mesh.
+
+The meshed offset is still experimental: results are not perfect, but it’s a good starting point for further refinement.
+
+## Limitations
+
+- Performance may degrade with very large meshes.
+- Some geometries (e.g. spheres) are not handled correctly yet.
+- For heavy processing, consider moving parts of the algorithm (offsetObjectHash, hashTable) to a Node.js backend.
+
+## Development
 
 If you want to start the application locally:
 
@@ -49,4 +104,8 @@ If you want to start the application locally:
 3. Run the command `npm install` to install the project's dependencies
 4. Run the command `npm run build` that creates the dist folder
 5. Run the server with the command `npm run start` 
-6. If all is correct the browser will be open to the `localhost:8080` url
+6. If all is correct the browser will be open to the `localhost:9000` url
+
+## Contributing
+
+Contributions are welcome! If you have suggestions or bug reports, please open an issue.
